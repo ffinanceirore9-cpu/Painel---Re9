@@ -203,13 +203,42 @@ details[open] .helpbox summary::before{transform:rotate(90deg);}
 /* ── SEARCH INPUT (drawer) ── */
 .drawer-search{width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:7px 10px;border:1px solid var(--border-md);border-radius:var(--r);background:var(--surface2);color:var(--text);outline:none;margin-bottom:12px;}
 .drawer-search:focus{border-color:var(--blue);background:var(--surface);}
+
+/* ── LOGIN ── */
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.login-box{background:var(--surface);border:1px solid var(--border-md);border-radius:var(--r-lg);padding:2.5rem 2rem;width:340px;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+.login-logo{font-size:14px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--text);margin-bottom:2rem;text-align:center;padding-top:.5rem;}
+.login-field{margin-bottom:14px;}
+.login-field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin-bottom:6px;}
+.login-field input{width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:9px 12px;border:1px solid var(--border-md);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none;transition:border-color .15s;box-sizing:border-box;}
+.login-field input:focus{border-color:var(--blue);}
+.login-btn{width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;padding:10px;border-radius:var(--r);border:none;background:var(--text);color:#fff;cursor:pointer;margin-top:8px;transition:opacity .15s;}
+.login-btn:hover{opacity:.85;}
+.login-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;min-height:18px;}
 </style>
 </head>
 <body>
 
+<!-- TELA DE LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Painel Gerencial</div>
+    <div class="login-field">
+      <label>Usuário</label>
+      <input type="text" id="login-user" placeholder="Digite seu usuário" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="Digite sua senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
 <!-- TOPBAR com filtros -->
 <div class="topbar">
-  <div class="topbar-brand">Painel Gerencial <span id="sync-indicator" style="font-size:9px;font-weight:400;opacity:.5;margin-left:8px;letter-spacing:0;text-transform:none"></span></div>
+  <div class="topbar-brand">Painel Gerencial <span id="sync-ind" style="font-size:9px;font-weight:400;opacity:.5;margin-left:6px;letter-spacing:0;text-transform:none"></span></div>
 
   <div class="topbar-filters" id="topbar-filters" style="display:none">
     <span class="tf-label">Filtrar</span>
@@ -232,7 +261,9 @@ details[open] .helpbox summary::before{transform:rotate(90deg);}
     <label style="font-size:10px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.6);cursor:pointer;font-family:'IBM Plex Sans',sans-serif;white-space:nowrap;margin:0">
       Carregar dados<input type="file" accept=".json" onchange="importDB(event)" style="display:none">
     </label>
-    <button onclick="clearAllData()" title="Limpar todos os dados da sessão" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.3);cursor:pointer;font-family:'IBM Plex Sans',sans-serif">✕</button>
+    <button id="btn-limpar" onclick="clearAllData()" title="Limpar todos os dados" style="display:none;font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.3);cursor:pointer;font-family:'IBM Plex Sans',sans-serif">✕ Limpar</button>
+  <span id="user-badge" style="margin-left:10px;font-size:10px;color:rgba(255,255,255,.45);font-weight:500"></span>
+  <button onclick="doLogout()" style="margin-left:8px;font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;font-family:'IBM Plex Sans',sans-serif">Sair</button>
   </div>
 </div>
 
@@ -250,7 +281,7 @@ details[open] .helpbox summary::before{transform:rotate(90deg);}
 
 <div class="wrap">
 
-  <div class="slabel" style="margin-top:0">Importar planilhas</div>
+  <div id="import-section"><div class="slabel" style="margin-top:0">Importar planilhas</div>
   <div class="upload-grid">
     <div class="ucard" id="card-cirug-file">
       <input type="file" accept=".xlsx,.xls,.csv" onchange="loadFile(event,'cirug-file')">
@@ -322,6 +353,7 @@ details[open] .helpbox summary::before{transform:rotate(90deg);}
       </div>
     </div>
   </details>
+  </div><!-- fim import-section -->
 
   <div id="dashboard-empty" class="empty">
     <div class="empty-title">Nenhuma planilha carregada</div>
@@ -522,7 +554,21 @@ function isCF510() {
 }
 
 
-document.addEventListener('DOMContentLoaded',()=>{loadFromServer();});
+document.addEventListener('DOMContentLoaded', () => {
+  // Verificar se já tem sessão ativa
+  const saved = sessionStorage.getItem('painel_user');
+  if (saved) {
+    try {
+      CURRENT_USER = JSON.parse(saved);
+      applyAuth();
+      loadFromServer();
+      return;
+    } catch(e) {}
+  }
+  // Mostrar tela de login
+  document.getElementById('login-screen').style.display = 'flex';
+  setTimeout(() => document.getElementById('login-user').focus(), 100);
+});
 
 
 
