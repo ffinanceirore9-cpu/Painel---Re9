@@ -486,7 +486,14 @@ function inferMonthKey(type, data, meta) {
   }
 
   if (type === 'recv' && data)
-    data.forEach(r => { if(r.Vencimento instanceof Date) dates.push(r.Vencimento); });
+    data.forEach(r => { if(r.Vencimento instanceof Date && !isNaN(r.Vencimento)) dates.push(r.Vencimento); });
+
+  if (type === 'recv-cf' && data)
+    data.forEach(r => {
+      const d = r.Data;
+      if (d instanceof Date && !isNaN(d)) dates.push(d);
+      else if (d) { const pd = new Date(d); if (!isNaN(pd)) dates.push(pd); }
+    });
 
   if (!dates.length) return null;
 
@@ -891,20 +898,24 @@ function parseRecvCF(rows) {
     })
     .map(r => {
       let data = r['Data movimento'];
-      if (data instanceof Date && !isNaN(data)) { /* ok */ }
-      else if (typeof data === 'number') data = new Date(Math.round((data-25569)*86400*1000));
-      else { const d = new Date(String(data)); data = isNaN(d) ? null : d; }
+      // cellDates:true já retorna Date, mas verificar outros formatos
+      if (!(data instanceof Date) || isNaN(data)) {
+        if (typeof data === 'number') data = new Date(Math.round((data-25569)*86400*1000));
+        else data = new Date(String(data));
+      }
+      if (isNaN(data)) data = null;
+      const valor = Math.abs(parseFloat(String(r['Valor']||0).replace(',','.')) || 0);
       return {
         Data:       data,
         Cliente:    String(r['Cliente/Fornec/Movto'] || '').trim(),
-        Valor:      Math.abs(parseFloat(String(r['Valor']||0).replace(',','.')) || 0),
+        Valor:      valor,
         Descricao:  String(r['Descricao da conta'] || '').trim(),
         Observacao: String(r['Observacao movimento'] || '').trim(),
         Documento:  String(r['Numero documento'] || '').trim(),
         _fonte:     'cf510recv'
       };
     })
-    .filter(r => r.Valor > 0 && r.Data);
+    .filter(r => r.Valor > 0 && r.Data && !isNaN(r.Data));
 }
 
 // ── FILTROS ───────────────────────────────────────────────────────
