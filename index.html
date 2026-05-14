@@ -332,7 +332,14 @@ details[open] .helpbox summary::before{transform:rotate(90deg);}
 
     <div class="month-row">
       <div class="slabel" style="margin:0">Período</div>
-      <div class="month-tabs" id="month-tabs"></div>
+      <select id="month-tabs" onchange="onMonthSelect(this.value)"
+        style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;
+               padding:5px 28px 5px 10px;border-radius:6px;border:1px solid var(--border-md);
+               background:var(--surface);color:var(--text);cursor:pointer;outline:none;
+               appearance:none;-webkit-appearance:none;
+               background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239a9a97'/%3E%3C/svg%3E\");
+               background-repeat:no-repeat;background-position:right 9px center;">
+      </select>
     </div>
 
   </div><!-- fim .wrap temporário para period selector -->
@@ -1051,30 +1058,32 @@ function rebuildDashboard() {
   const [ky, km] = selMonth.split('-').map(Number);
   document.getElementById('kpi-period-label').textContent = MONTHS[km] + ' ' + ky;
 
-  // Abas de mês
-  const wrap = document.getElementById('month-tabs'); wrap.innerHTML = '';
-  months.forEach(m => {
-    const tab = document.createElement('div');
-    tab.style.cssText = 'display:flex;align-items:center;gap:2px';
-    const b = document.createElement('button');
-    b.className = 'mtab' + (m.key === selMonth ? ' active' : '');
-    b.textContent = MONTHS[m.month].slice(0,3) + ' ' + m.year;
-    b.onclick = () => { selMonth = m.key; FILTERS.hospital=''; FILTERS.repr=''; FILTERS.medico=''; rebuildDashboard(); };
-    const del = document.createElement('button');
-    del.title = 'Remover ' + MONTHS[m.month] + '/' + m.year;
-    del.style.cssText = 'font-size:9px;padding:2px 5px;border-radius:3px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.4);cursor:pointer;line-height:1;margin-left:1px';
-    del.textContent = '✕';
-    del.onclick = (e) => { e.stopPropagation(); deleteMonth(m.key); };
-    tab.appendChild(b);
-    if (m.key === selMonth) tab.appendChild(del);
-    wrap.appendChild(tab);
-  });
+  // Select de mês
+  const sel = document.getElementById('month-tabs');
+  sel.innerHTML = months.map(m =>
+    `<option value="${m.key}" ${m.key===selMonth?'selected':''}>
+      ${MONTHS[m.month]} ${m.year}${m.key===selMonth?' ✕':''}</option>`
+  ).join('');
+  // Opção de deletar mês separada
+  sel.innerHTML = months.map(m =>
+    `<option value="${m.key}" ${m.key===selMonth?'selected':''}>${MONTHS[m.month]} ${m.year}</option>`
+  ).join('') + `<option value="__del__" style="color:var(--red)">— Remover mês selecionado</option>`;
 
   syncUploadCards();
   populateFilters();
 
   const [y, mo] = selMonth.split('-').map(Number);
   renderKPIs(y, mo); renderCirug(y, mo); renderComis(y, mo); renderRecv(y, mo);
+}
+
+function onMonthSelect(val) {
+  if (val === '__del__') {
+    deleteMonth(selMonth);
+    return;
+  }
+  selMonth = val;
+  FILTERS.hospital=''; FILTERS.repr=''; FILTERS.medico='';
+  rebuildDashboard();
 }
 
 function deleteMonth(key) {
@@ -1415,29 +1424,54 @@ function renderCirug(y,mo) {
   const hasCirug = _s.cirugFile || (_s.comis && !isCF510());
   if(!hasCirug){panel.style.display='none';return;}
   panel.style.display='';
-  const pm=mo===0?11:mo-1, py=mo===0?y-1:y;
+
+  // Encontrar mês anterior com dados no DB
+  const allMonths = getMonths(); // ordenados
+  const curIdx = allMonths.findIndex(m => m.key === selMonth);
+  const prevMonth = curIdx > 0 ? allMonths[curIdx-1] : null;
+  const py = prevMonth ? prevMonth.year  : (mo===0?y-1:y);
+  const pm = prevMonth ? prevMonth.month : (mo===0?11:mo-1);
+
   let wks=[0,0,0,0], wksp=[0,0,0,0];
+
+  // Mês atual — da planilha selecionada
   if (_s.cirugFile) {
     const base=filteredCirug(_s.cirugFile);
     base.filter(r=>sameMonth(r.Data,y,mo)).forEach(r=>{const w=Math.min(3,Math.floor((r.Data.getDate()-1)/7));wks[w]++;});
-    base.filter(r=>sameMonth(r.Data,py,pm)).forEach(r=>{const w=Math.min(3,Math.floor((r.Data.getDate()-1)/7));wksp[w]++;});
   } else {
     const dcol=findCol(_s.comis[0],['dt.cirurgia','dtcirurgia','cirurgia']);
     const credcol=findCol(_s.comis[0],['dt.credito','dtcredito','credito','datacredito']);
     if(!dcol){panel.innerHTML='<div class="placeholder">Coluna Dt.cirurgia não encontrada.</div>';return;}
     const base=filteredComis(_s.comis);
-    const filt=(yr,mn)=>base.filter(r=>sameMonth(parseDate(credcol?r[credcol]:null),yr,mn)&&parseDate(r[dcol]));
-    filt(y,mo).forEach(r=>{const d=parseDate(r[dcol]);if(d){const w=Math.min(3,Math.floor((d.getDate()-1)/7));wks[w]++;}});
-    filt(py,pm).forEach(r=>{const d=parseDate(r[dcol]);if(d){const w=Math.min(3,Math.floor((d.getDate()-1)/7));wksp[w]++;}});
+    base.filter(r=>sameMonth(parseDate(credcol?r[credcol]:null),y,mo)&&parseDate(r[dcol]))
+      .forEach(r=>{const d=parseDate(r[dcol]);if(d){const w=Math.min(3,Math.floor((d.getDate()-1)/7));wks[w]++;}});
   }
+
+  // Mês anterior — buscar no DB do mês anterior disponível
+  if (prevMonth) {
+    const prevState = DB[prevMonth.key] || {};
+    if (prevState.cirugFile) {
+      prevState.cirugFile.filter(r=>sameMonth(r.Data,py,pm))
+        .forEach(r=>{const w=Math.min(3,Math.floor((r.Data.getDate()-1)/7));wksp[w]++;});
+    } else if (prevState.comis && !prevState.comis[0]?.['_fonte']) {
+      const dcol=findCol(prevState.comis[0],['dt.cirurgia','dtcirurgia','cirurgia']);
+      const credcol=findCol(prevState.comis[0],['dt.credito','dtcredito','credito','datacredito']);
+      if (dcol) {
+        prevState.comis.filter(r=>sameMonth(parseDate(credcol?r[credcol]:null),py,pm)&&parseDate(r[dcol]))
+          .forEach(r=>{const d=parseDate(r[dcol]);if(d){const w=Math.min(3,Math.floor((d.getDate()-1)/7));wksp[w]++;}});
+      }
+    }
+  }
+
+  const prevLabel = prevMonth ? MONTHS[pm].slice(0,3)+' '+py : '—';
   document.getElementById('chart-legend-cirug').innerHTML=`
     <div class="cleg-item"><span class="cleg-dot" style="background:#1d4ed8"></span>${MONTHS[mo].slice(0,3)} ${y}</div>
-    <div class="cleg-item"><span class="cleg-dot" style="background:#bfdbfe"></span>${MONTHS[pm].slice(0,3)} ${py}</div>`;
+    ${prevMonth?`<div class="cleg-item"><span class="cleg-dot" style="background:#bfdbfe"></span>${prevLabel}</div>`:''}`;
   if(chartCirug)chartCirug.destroy();
   chartCirug=new Chart(document.getElementById('chart-cirug'),{type:'bar',
     data:{labels:['Sem 1','Sem 2','Sem 3','Sem 4'],datasets:[
-      {label:'Este mês',data:wks,backgroundColor:'#1d4ed8',borderRadius:3,categoryPercentage:.7,barPercentage:.45},
-      {label:'Mês anterior',data:wksp,backgroundColor:'#bfdbfe',borderRadius:3,categoryPercentage:.7,barPercentage:.45}
+      {label:MONTHS[mo].slice(0,3)+' '+y, data:wks, backgroundColor:'#1d4ed8',borderRadius:3,categoryPercentage:.7,barPercentage:.45},
+      {label:prevLabel, data:wksp, backgroundColor:'#bfdbfe',borderRadius:3,categoryPercentage:.7,barPercentage:.45}
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{grid:{display:false},ticks:{font:{size:11,family:'IBM Plex Sans'},color:'#9a9a97'}},
