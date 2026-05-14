@@ -276,6 +276,12 @@ details[open] .helpbox summary::before{transform:rotate(90deg);}
       <div class="ucard-label">Previsão de recebimentos</div>
       <div class="ucard-hint" id="hint-recv">Selecionar arquivo .xlsx / .csv</div>
     </div>
+    <div class="ucard" id="card-recv-cf">
+      <input type="file" accept=".xlsx,.xls,.csv" onchange="loadFile(event,'recv-cf')">
+      <div class="ucard-mark">&#10003;</div>
+      <div class="ucard-label">Recebimentos realizados (CF_510)</div>
+      <div class="ucard-hint" id="hint-recv-cf">Selecionar arquivo .xlsx / .csv</div>
+    </div>
   </div>
 
   <details>
@@ -414,6 +420,7 @@ function prepareForSave(db) {
     if (mo.comis)     mo.comis.forEach(r => { if(r['Dt.credito']) r['Dt.credito'] = dateToStr(new Date(r['Dt.credito'])); });
     if (mo.caixa)     mo.caixa.forEach(r => { if(r.data) r.data = dateToStr(new Date(r.data)); });
     if (mo.recv)      mo.recv.forEach(r => { if(r.Vencimento) r.Vencimento = dateToStr(new Date(r.Vencimento)); });
+    if (mo.recvCF)    mo.recvCF.forEach(r => { if(r.Data) r.Data = dateToStr(new Date(r.Data)); });
     if (mo.caixaMeta) {
       if (mo.caixaMeta.saldoAnterior?.data) mo.caixaMeta.saldoAnterior.data = dateToStr(new Date(mo.caixaMeta.saldoAnterior.data));
       if (mo.caixaMeta.saldosDia) mo.caixaMeta.saldosDia.forEach(s => { if(s.data) s.data = dateToStr(new Date(s.data)); });
@@ -448,7 +455,7 @@ async function loadFromServer() {
   rebuildDashboard();
 }
 
-async function loadFromServer(){const ind=document.getElementById('sync-ind');if(ind)ind.textContent='carregando...';const dados=await supaRead();if(ind)ind.textContent='';if(!dados||!Object.keys(dados).length){rebuildDashboard();return;}Object.values(dados).forEach(mo=>{if(mo.cirugFile)mo.cirugFile.forEach(r=>{if(r.Data)r.Data=strToDate(r.Data);});if(mo.comis)mo.comis.forEach(r=>{if(r['Dt.credito'])r['Dt.credito']=strToDate(r['Dt.credito']);});if(mo.caixa)mo.caixa.forEach(r=>{if(r.data)r.data=strToDate(r.data);});if(mo.recv)mo.recv.forEach(r=>{if(r.Vencimento)r.Vencimento=strToDate(r.Vencimento);});if(mo.caixaMeta){if(mo.caixaMeta.saldoAnterior&&mo.caixaMeta.saldoAnterior.data)mo.caixaMeta.saldoAnterior.data=strToDate(mo.caixaMeta.saldoAnterior.data);if(mo.caixaMeta.saldosDia)mo.caixaMeta.saldosDia.forEach(s=>{if(s.data)s.data=strToDate(s.data);});}});DB=dados;selMonth=Object.keys(DB).sort().pop();rebuildDashboard();}
+async function loadFromServer(){const ind=document.getElementById('sync-ind');if(ind)ind.textContent='carregando...';const dados=await supaRead();if(ind)ind.textContent='';if(!dados||!Object.keys(dados).length){rebuildDashboard();return;}Object.values(dados).forEach(mo=>{if(mo.cirugFile)mo.cirugFile.forEach(r=>{if(r.Data)r.Data=strToDate(r.Data);});if(mo.comis)mo.comis.forEach(r=>{if(r['Dt.credito'])r['Dt.credito']=strToDate(r['Dt.credito']);});if(mo.caixa)mo.caixa.forEach(r=>{if(r.data)r.data=strToDate(r.data);});if(mo.recv)mo.recv.forEach(r=>{if(r.Vencimento)r.Vencimento=strToDate(r.Vencimento);});if(mo.recvCF)mo.recvCF.forEach(r=>{if(r.Data)r.Data=strToDate(r.Data);});if(mo.caixaMeta){if(mo.caixaMeta.saldoAnterior&&mo.caixaMeta.saldoAnterior.data)mo.caixaMeta.saldoAnterior.data=strToDate(mo.caixaMeta.saldoAnterior.data);if(mo.caixaMeta.saldosDia)mo.caixaMeta.saldosDia.forEach(s=>{if(s.data)s.data=strToDate(s.data);});}});DB=dados;selMonth=Object.keys(DB).sort().pop();rebuildDashboard();}
 function dbSave(db){const ind=document.getElementById('sync-ind');if(ind)ind.textContent='salvando...';supaWrite(prepareForSave(db)).then(()=>{if(ind){ind.textContent='✓';setTimeout(()=>ind.textContent='',2000);}});return true;}
 
 function dbMonthKey(y, m) { return `${y}-${m}`; }
@@ -502,7 +509,7 @@ document.getElementById('topbar-date').textContent = now.toLocaleDateString('pt-
 
 // Retorna o "STATE" do mês selecionado
 function getMonthState() {
-  if (!selMonth || !DB[selMonth]) return { cirugFile:null, comis:null, caixa:null, caixaMeta:null, recv:null };
+  if (!selMonth || !DB[selMonth]) return { cirugFile:null, comis:null, caixa:null, caixaMeta:null, recv:null, recvCF:null };
   return DB[selMonth];
 }
 
@@ -549,6 +556,7 @@ function importDB(e) {
         if (mo.comis)     mo.comis.forEach(r => { if(r['Dt.credito']) r['Dt.credito'] = strToDate(r['Dt.credito']); });
         if (mo.caixa)     mo.caixa.forEach(r => { if(r.data) r.data = strToDate(r.data); });
         if (mo.recv)      mo.recv.forEach(r => { if(r.Vencimento) r.Vencimento = strToDate(r.Vencimento); });
+      if (mo.recvCF)    mo.recvCF.forEach(r => { if(r.Data) r.Data = strToDate(r.Data); });
         if (mo.caixaMeta) {
           if (mo.caixaMeta.saldoAnterior?.data) mo.caixaMeta.saldoAnterior.data = strToDate(mo.caixaMeta.saldoAnterior.data);
           if (mo.caixaMeta.saldosDia) mo.caixaMeta.saldosDia.forEach(s => { if(s.data) s.data = strToDate(s.data); });
@@ -616,6 +624,9 @@ function loadFile(e, type) {
         const rows = XLSX.utils.sheet_to_json(ws, {defval:'', cellDates:true});
         const hasVrAberto = rows.length && Object.keys(rows[0]).some(k => k.toLowerCase().includes('vr.aberto') || k.toLowerCase().includes('vr aberto'));
         parsed = hasVrAberto ? parseRecvVA(rows) : rows;
+      } else if (type === 'recv-cf') {
+        const rows = XLSX.utils.sheet_to_json(ws, {defval:'', cellDates:true});
+        parsed = parseRecvCF(rows);
       }
 
       // Descobrir a qual mês esses dados pertencem
@@ -629,14 +640,15 @@ function loadFile(e, type) {
       }
 
       // Criar entrada do mês se não existe (preserva outros tipos já importados)
-      if (!DB[mk]) DB[mk] = { cirugFile:null, comis:null, caixa:null, caixaMeta:null, recv:null, labels:{} };
+      if (!DB[mk]) DB[mk] = { cirugFile:null, comis:null, caixa:null, caixaMeta:null, recv:null, recvCF:null, labels:{} };
       const mo = DB[mk];
 
       // Salvar os dados do tipo importado
       if (type === 'caixa')           { mo.caixa = parsed; mo.caixaMeta = parsedMeta; }
       else if (type === 'cirug-file') { mo.cirugFile = parsed; }
       else if (type === 'comis')      { mo.comis = parsed; }
-      else if (type === 'recv')       { mo.recv = parsed; }
+      else if (type === 'recv')       { mo.recv    = parsed; }
+      else if (type === 'recv-cf')    { mo.recvCF = parsed; }
       if (!mo.labels) mo.labels = {};
       mo.labels[type] = file.name;
 
@@ -870,6 +882,31 @@ function parseRecvVA(rows) {
     });
 }
 
+// ── PARSER CF_510 A RECEBER ──────────────────────────────────────
+function parseRecvCF(rows) {
+  return rows
+    .filter(r => {
+      const desc = String(r['Descricao da conta'] || '').trim().toUpperCase();
+      return desc.includes('RECEITA');
+    })
+    .map(r => {
+      let data = r['Data movimento'];
+      if (data instanceof Date && !isNaN(data)) { /* ok */ }
+      else if (typeof data === 'number') data = new Date(Math.round((data-25569)*86400*1000));
+      else { const d = new Date(String(data)); data = isNaN(d) ? null : d; }
+      return {
+        Data:       data,
+        Cliente:    String(r['Cliente/Fornec/Movto'] || '').trim(),
+        Valor:      Math.abs(parseFloat(String(r['Valor']||0).replace(',','.')) || 0),
+        Descricao:  String(r['Descricao da conta'] || '').trim(),
+        Observacao: String(r['Observacao movimento'] || '').trim(),
+        Documento:  String(r['Numero documento'] || '').trim(),
+        _fonte:     'cf510recv'
+      };
+    })
+    .filter(r => r.Valor > 0 && r.Data);
+}
+
 // ── FILTROS ───────────────────────────────────────────────────────
 function populateFilters() {
   const s = getMonthState();
@@ -989,7 +1026,7 @@ function getMonths() {
   return Object.keys(DB)
     .filter(k => {
       const mo = DB[k];
-      return mo && (mo.cirugFile || mo.comis || mo.caixa || mo.recv);
+      return mo && (mo.cirugFile || mo.comis || mo.caixa || mo.recv || mo.recvCF);
     })
     .sort()
     .map(k => {
@@ -1058,6 +1095,7 @@ function syncUploadCards() {
     'comis':      { data: mo.comis,     label: 'Comissões' },
     'caixa':      { data: mo.caixa,     label: 'Extrato'   },
     'recv':       { data: mo.recv,      label: 'Previsão'  },
+    'recv-cf':    { data: mo.recvCF,    label: 'Recebimentos' },
   };
   Object.entries(map).forEach(([type, info]) => {
     const card = document.getElementById('card-'+type);
@@ -1127,19 +1165,42 @@ function renderKPIs(y,mo) {
       });
     }
   }
-  if(_s.recv){
+  // KPI Recebimento: inteligente por mês
+  // Mês passado → CF510 recebido | Mês vigente/futuro → previsão va0529
+  const hoje = new Date();
+  const mesAtual  = hoje.getFullYear() * 12 + hoje.getMonth();
+  const mesKpi    = y * 12 + mo;
+  const mesFechado = mesKpi < mesAtual;
+
+  if (mesFechado && _s.recvCF && _s.recvCF.length) {
+    // Mês já fechado → mostrar recebido (CF510)
+    const rows = _s.recvCF.filter(r => r.Data && sameMonth(r.Data, y, mo));
+    const total = rows.reduce((a,r)=>a+r.Valor,0);
+    kpis.push({id:'prev', label:'Recebido no mês', value:fmtBRL(total),
+      sub:`${rows.length} lançamentos`, delta:null, cls:'kpi-green',
+      rows, type:'prev', mesFechado:true});
+  } else if (!mesFechado && _s.recv && _s.recv.length) {
+    // Mês vigente ou futuro → mostrar previsão (va0529)
     const isVA = !!_s.recv[0]['_fonte'];
-    if(isVA){
+    if (isVA) {
       const rows = _s.recv.filter(r=>r.Vencimento&&sameMonth(r.Vencimento,y,mo));
       const total = rows.reduce((a,r)=>a+(r['Vr.aberto']||0),0);
-      kpis.push({id:'prev',label:'Previsão de recebimento',value:fmtBRL(total),sub:`${rows.length} títulos a vencer`,delta:null,cls:'kpi-amber',rows,type:'prev'});
-    } else {
-      const vcol=findCol(_s.recv[0],['valor','value','total','previsto']);
-      const dcol=findCol(_s.recv[0],['vencimento','data','date','mes']);
-      const rows=dcol?_s.recv.filter(r=>sameMonth(parseDate(r[dcol]),y,mo)):_s.recv;
-      const total=vcol?rows.reduce((a,r)=>a+parseVal(r[vcol]),0):0;
-      kpis.push({id:'prev',label:'Previsão de recebimento',value:fmtBRL(total),sub:'mês vigente',delta:null,cls:'kpi-amber',rows,type:'prev',vcol});
+      kpis.push({id:'prev', label:'Previsão de recebimento', value:fmtBRL(total),
+        sub:`${rows.length} títulos em aberto`, delta:null, cls:'kpi-amber',
+        rows, type:'prev', mesFechado:false});
     }
+  } else if (_s.recv && _s.recv.length) {
+    // Fallback: só tem previsão mesmo sendo mês fechado
+    const isVA = !!_s.recv[0]['_fonte'];
+    if (isVA) {
+      const rows = _s.recv.filter(r=>r.Vencimento&&sameMonth(r.Vencimento,y,mo));
+      const total = rows.reduce((a,r)=>a+(r['Vr.aberto']||0),0);
+      kpis.push({id:'prev', label:'Previsão de recebimento', value:fmtBRL(total),
+        sub:`${rows.length} títulos`, delta:null, cls:'kpi-amber',
+        rows, type:'prev', mesFechado:false});
+    }
+  } else if (mesFechado && _s.recvCF) {
+    // nada
   }
   document.getElementById('kpi-grid').innerHTML=kpis.map(k=>{
     const noClick = k.type==='saldo';
@@ -1268,18 +1329,51 @@ function openKpiDrawer(id) {
 
 
   else if(k.type==='prev') {
-    const isVA = _s.recv && !!_s.recv[0]['_fonte'];
     const rows = k.rows;
+    const mesFechado = k.mesFechado;
 
-    if(isVA){
-      const totAberto   = rows.reduce((a,r)=>a+(r['Vr.aberto']||0),0);
-      const totRecebido = rows.reduce((a,r)=>a+(r['Vr.recebido']||0),0);
-      // Agrupa por convênio para o resumo
+    if (mesFechado) {
+      // Mês fechado → CF510 recebido
+      const total = rows.reduce((a,r)=>a+r.Valor,0);
+      // Agrupar por cliente
+      const map={};
+      rows.forEach(r=>{const n=r.Cliente||'—';if(!map[n])map[n]=0;map[n]+=r.Valor;});
+      const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+      const maxV=sorted.length?sorted[0][1]:1;
+      const colors=['#1d4ed8','#166534','#92400e','#991b1b','#5b21b6','#0e7490'];
+      const rankHtml=sorted.map(([n,v],i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n)}</div>
+            <div style="height:3px;background:var(--surface2);border-radius:2px;margin-top:4px"><div style="height:3px;border-radius:2px;background:${colors[i%colors.length]};width:${Math.round(v/maxV*100)}%"></div></div>
+          </div>
+          <div style="font-size:12px;font-weight:600;font-family:'IBM Plex Mono',monospace;flex-shrink:0">${fmtBRL(v)}</div>
+        </div>`).join('');
+      const trs=rows.sort((a,b)=>a.Data-b.Data).map(r=>`<tr>
+        <td style="white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-3)">${r.Data?r.Data.toLocaleDateString('pt-BR'):'—'}</td>
+        <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.Cliente||'—')}</td>
+        <td style="font-size:11px;color:var(--text-2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.Observacao||'—')}</td>
+        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--green);white-space:nowrap">+${fmtBRL(r.Valor)}</td>
+      </tr>`).join('');
+      openDrawer('Recebido — '+MONTHS[mo]+' '+y, `
+        <div class="drawer-kpi-value" style="color:var(--green)">${fmtBRL(total)}</div>
+        <div class="drawer-kpi-sub">${rows.length} lançamentos recebidos no mês</div>
+        <div style="margin-bottom:16px">${rankHtml}</div>
+        <input class="drawer-search" placeholder="Buscar cliente ou observação..." oninput="drawerSearch(this,'dtbl-prev')">
+        <div style="overflow-x:auto">
+        <table class="dtable" id="dtbl-prev">
+          <thead><tr><th>Data</th><th>Cliente</th><th>Observação</th><th class="right">Valor</th></tr></thead>
+          <tbody>${trs||'<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:1rem">Sem registros</td></tr>'}</tbody>
+        </table></div>`);
+
+    } else {
+      // Mês vigente/futuro → va0529 previsão
+      const totAberto = rows.reduce((a,r)=>a+(r['Vr.aberto']||0),0);
       const mapConv={};
       rows.forEach(r=>{const k2=r.Origem||'—';if(!mapConv[k2])mapConv[k2]=0;mapConv[k2]+=r['Vr.aberto']||0;});
       const sortedConv=Object.entries(mapConv).sort((a,b)=>b[1]-a[1]);
       const maxC=sortedConv.length?sortedConv[0][1]:1;
-      const convHtml=sortedConv.map(([n,v],i)=>`
+      const convHtml=sortedConv.map(([n,v])=>`
         <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n)}</div>
@@ -1287,7 +1381,6 @@ function openKpiDrawer(id) {
           </div>
           <div style="font-size:12px;font-weight:600;font-family:'IBM Plex Mono',monospace;flex-shrink:0">${fmtBRL(v)}</div>
         </div>`).join('');
-      // Tabela completa por título
       const trs=rows.sort((a,b)=>a.Vencimento-b.Vencimento).map(r=>`<tr>
         <td style="white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-3)">${r.Vencimento?r.Vencimento.toLocaleDateString('pt-BR'):'—'}</td>
         <td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.Paciente||'—')}</td>
@@ -1298,50 +1391,12 @@ function openKpiDrawer(id) {
       openDrawer('Previsão de recebimento — '+MONTHS[mo]+' '+y, `
         <div class="drawer-kpi-value" style="color:#d97706">${fmtBRL(totAberto)}</div>
         <div class="drawer-kpi-sub">${rows.length} títulos em aberto · vencimento em ${MONTHS[mo]+' '+y}</div>
-        <div style="background:var(--surface2);border-radius:var(--r);padding:10px 14px;margin-bottom:16px;display:flex;gap:24px">
-          <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin-bottom:3px">Em aberto</div>
-            <div style="font-size:16px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:#d97706">${fmtBRL(totAberto)}</div></div>
-          <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin-bottom:3px">Já recebido</div>
-            <div style="font-size:16px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--green)">${fmtBRL(totRecebido)}</div></div>
-        </div>
         <div style="margin-bottom:16px">${convHtml}</div>
         <input class="drawer-search" placeholder="Buscar paciente, convênio ou representante..." oninput="drawerSearch(this,'dtbl-prev')">
         <div style="overflow-x:auto">
         <table class="dtable" id="dtbl-prev">
           <thead><tr><th>Vencimento</th><th>Paciente</th><th>Convênio</th><th>Representante</th><th class="right">Vr. aberto</th></tr></thead>
           <tbody>${trs||'<tr><td colspan="5" style="text-align:center;color:var(--text-3);padding:1rem">Sem registros</td></tr>'}</tbody>
-        </table></div>`);
-    } else {
-      const vcol=k.vcol;
-      const ocol=findCol(_s.recv[0],['origem','convenio','convênio','plano','descricao','descrição','item','nome','name']);
-      const scol=findCol(_s.recv[0],['status','situacao','situação']);
-      const dcol=findCol(_s.recv[0],['vencimento','data','date','mes']);
-      let totPrev=0,totReceb=0;
-      const trs=rows.map(r=>{
-        const orig=ocol?r[ocol]:'—',val=vcol?parseVal(r[vcol]):0;
-        const st=scol?String(r[scol]).toLowerCase().trim():'';
-        totPrev+=val;
-        const isRec=st.includes('receb')||st.includes('pago')||st.includes('conf');
-        const isPart=st.includes('parc');
-        if(isRec)totReceb+=val;else if(isPart)totReceb+=val*.5;
-        let bc='badge-gray',bl='Pendente';
-        if(isRec){bc='badge-green';bl='Recebido';}if(isPart){bc='badge-amber';bl='Parcial';}
-        const venc=dcol?parseDate(r[dcol]):null;
-        return `<tr>
-          <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(orig)}</td>
-          <td style="white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-3)">${venc?venc.toLocaleDateString('pt-BR'):'—'}</td>
-          <td><span class="badge ${bc}">${bl}</span></td>
-          <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500">${fmtBRL(val)}</td>
-        </tr>`;}).join('');
-      const pct=totPrev>0?Math.round(totReceb/totPrev*100):0;
-      openDrawer('Previsão de recebimentos — '+MONTHS[mo]+' '+y, `
-        <div class="drawer-kpi-value" style="color:#d97706">${fmtBRL(totPrev)}</div>
-        <div class="drawer-kpi-sub">${rows.length} lançamentos previstos · ${pct}% realizado</div>
-        <input class="drawer-search" placeholder="Buscar origem..." oninput="drawerSearch(this,'dtbl-prev')">
-        <div style="overflow-x:auto">
-        <table class="dtable" id="dtbl-prev">
-          <thead><tr><th>Origem</th><th>Vencimento</th><th>Status</th><th class="right">Valor</th></tr></thead>
-          <tbody>${trs||'<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:1rem">Sem registros</td></tr>'}</tbody>
         </table></div>`);
     }
   }
@@ -1424,33 +1479,64 @@ function renderComis(y,mo) {
     :'<div class="placeholder">Sem dados para este mês.</div>';
 }
 
-// ── CAIXA / EXTRATO ───────────────────────────────────────────────
 // ── RECEBIMENTOS ──────────────────────────────────────────────────
 function renderRecv(y,mo) {
   const _s = getMonthState();
-  const panel=document.getElementById('panel-recv');
-  if(!_s.recv){panel.style.display='none';return;}panel.style.display='';
-  const isVA = _s.recv.length && !!_s.recv[0]['_fonte'];
+  const panel = document.getElementById('panel-recv');
 
-  let rows, totAberto=0, totRecebido=0;
+  const hoje = new Date();
+  const mesAtual  = hoje.getFullYear() * 12 + hoje.getMonth();
+  const mesKpi    = y * 12 + mo;
+  const mesFechado = mesKpi < mesAtual;
+
+  // Mês fechado e tem CF510 → mostrar recebido
+  if (mesFechado && _s.recvCF && _s.recvCF.length) {
+    panel.style.display = '';
+    const rows = _s.recvCF.filter(r => r.Data && sameMonth(r.Data, y, mo));
+    const total = rows.reduce((a,r)=>a+r.Valor, 0);
+    // Agrupar por cliente
+    const map = {};
+    rows.forEach(r => { const k=r.Cliente||'—'; if(!map[k])map[k]=0; map[k]+=r.Valor; });
+    const tbody = Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([orig,v])=>`<tr>
+      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(orig)}</td>
+      <td><span class="badge badge-green">Recebido</span></td>
+      <td class="mono right">${fmtBRL(v)}</td>
+    </tr>`).join('');
+    document.getElementById('recv-table').innerHTML=`
+      <thead><tr><th>Cliente / Convênio</th><th>Status</th><th class="right">Valor</th></tr></thead>
+      <tbody>${tbody||'<tr><td colspan="3" style="text-align:center;color:var(--text-3);padding:1rem">Sem registros</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="2" style="color:var(--text-2)">Total recebido</td><td class="mono right">${fmtBRL(total)}</td></tr></tfoot>`;
+    document.getElementById('recv-pct-label').textContent = `${rows.length} lançamentos`;
+    setTimeout(()=>{ document.getElementById('recv-progress').style.width='100%'; }, 80);
+    return;
+  }
+
+  // Mês vigente/futuro ou sem CF510 → mostrar previsão va0529
+  if (!_s.recv || !_s.recv.length) { panel.style.display='none'; return; }
+  panel.style.display = '';
+
+  const isVA = !!_s.recv[0]['_fonte'];
+  let rows = isVA
+    ? _s.recv.filter(r => r.Vencimento && sameMonth(r.Vencimento, y, mo))
+    : _s.recv;
+  const totAberto = rows.reduce((a,r)=>a+(r['Vr.aberto']||0), 0);
 
   if (isVA) {
-    rows = _s.recv.filter(r => r.Vencimento && sameMonth(r.Vencimento, y, mo));
-    rows.forEach(r => { totAberto += r['Vr.aberto']||0; totRecebido += r['Vr.recebido']||0; });
-  } else {
-    const ocol=findCol(_s.recv[0],['origem','convenio','convênio','plano','descricao','descrição','item','nome','name']);
-    const vcol=findCol(_s.recv[0],['valor','value','total','previsto']);
-    const scol=findCol(_s.recv[0],['status','situacao','situação']);
-    const dcol=findCol(_s.recv[0],['vencimento','data','date','mes']);
-    rows = dcol ? _s.recv.filter(r=>sameMonth(parseDate(r[dcol]),y,mo)) : _s.recv;
-    rows.forEach(r => {
-      const val=vcol?parseVal(r[vcol]):0;
-      const st=scol?String(r[scol]).toLowerCase().trim():'';
-      totAberto += val;
-      if(st.includes('receb')||st.includes('pago')) totRecebido+=val;
-      else if(st.includes('parc')) totRecebido+=val*.5;
-    });
+    const map = {};
+    rows.forEach(r => { const k=r.Origem||'—'; if(!map[k])map[k]=0; map[k]+=r['Vr.aberto']||0; });
+    const tbody = Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([orig,v])=>`<tr>
+      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(orig)}</td>
+      <td><span class="badge badge-gray">Pendente</span></td>
+      <td class="mono right">${fmtBRL(v)}</td>
+    </tr>`).join('');
+    document.getElementById('recv-table').innerHTML=`
+      <thead><tr><th>Convênio / Cliente</th><th>Status</th><th class="right">Vr. em aberto</th></tr></thead>
+      <tbody>${tbody||'<tr><td colspan="3" style="text-align:center;color:var(--text-3);padding:1rem">Sem registros</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="2" style="color:var(--text-2)">Total em aberto</td><td class="mono right">${fmtBRL(totAberto)}</td></tr></tfoot>`;
+    document.getElementById('recv-pct-label').textContent = `${rows.length} títulos em aberto`;
+    setTimeout(()=>{ document.getElementById('recv-progress').style.width='0%'; }, 80);
   }
+}
 
   const totPrev = totAberto + totRecebido;
   const pct = totPrev > 0 ? Math.round(totRecebido / totPrev * 100) : 0;
@@ -1498,12 +1584,6 @@ function renderRecv(y,mo) {
       <tfoot><tr><td colspan="2" style="color:var(--text-2)">Total previsto</td><td class="mono right">${fmtBRL(totPrev)}</td></tr></tfoot>`;
   }
 
-  document.getElementById('recv-pct-label').textContent = isVA
-    ? `${rows.length} títulos em aberto`
-    : `${pct}% — ${fmtBRL(totRecebido)}`;
-  // Barra: % do total já recebido; se VA e tudo pendente, 0%
-  setTimeout(()=>{ document.getElementById('recv-progress').style.width = pct+'%'; }, 80);
-}
 
 </script>
 </body>
