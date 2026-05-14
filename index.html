@@ -436,11 +436,12 @@ async function loadAuth() {
       const rows = await res.json();
       if (rows && rows.length) {
         const auth = {};
-        rows.forEach(r => { auth[r.usuario] = { senha:r.senha, perfil:r.perfil }; });
+        rows.forEach(r => { auth[String(r.usuario).toLowerCase()] = { senha:r.senha, perfil:r.perfil }; });
         return auth;
       }
     }
   } catch(e) { console.warn('loadAuth:', e); }
+  // Fallback: credenciais locais
   return AUTH_DEFAULTS;
 }
 
