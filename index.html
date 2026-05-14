@@ -422,6 +422,72 @@ function supaHeaders(){return{'Content-Type':'application/json','apikey':SUPA_KE
 async function supaRead(){try{const r=await fetch(SUPA_URL+'/rest/v1/painel_db?id=eq.main&select=dados',{headers:supaHeaders()});const rows=await r.json();return(rows&&rows[0])?rows[0].dados:{};}catch(e){console.warn('supaRead:',e);return{};}}
 async function supaWrite(dados){try{await fetch(SUPA_URL+'/rest/v1/painel_db?id=eq.main',{method:'PATCH',headers:supaHeaders(),body:JSON.stringify({dados,updated_at:new Date().toISOString()})});}catch(e){console.warn('supaWrite:',e);}}
 
+// ── AUTENTICAÇÃO ──────────────────────────────────────────────────
+const AUTH_DEFAULTS = {
+  'felipe@re9.com.br': { senha:'123088', perfil:'admin' },
+  'visualizador':       { senha:'view123', perfil:'viewer' }
+};
+let CURRENT_USER = null;
+
+async function loadAuth() {
+  try {
+    const res = await fetch(SUPA_URL+'/rest/v1/painel_auth?select=*', {headers:supaHeaders()});
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows && rows.length) {
+        const auth = {};
+        rows.forEach(r => { auth[r.usuario] = { senha:r.senha, perfil:r.perfil }; });
+        return auth;
+      }
+    }
+  } catch(e) { console.warn('loadAuth:', e); }
+  return AUTH_DEFAULTS;
+}
+
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-err');
+  err.textContent = 'Verificando...';
+  const auth  = await loadAuth();
+  const entry = auth[user];
+  if (!entry || entry.senha !== pass) {
+    err.textContent = 'Usuário ou senha incorretos.';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+    return;
+  }
+  CURRENT_USER = { usuario:user, perfil:entry.perfil };
+  sessionStorage.setItem('painel_user', JSON.stringify(CURRENT_USER));
+  applyAuth();
+  err.textContent = '';
+  loadFromServer();
+}
+
+function doLogout() {
+  CURRENT_USER = null;
+  sessionStorage.removeItem('painel_user');
+  DB = {}; selMonth = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('dashboard-content').style.display = 'none';
+  document.getElementById('dashboard-content-body').style.display = 'none';
+  document.getElementById('kpi-strip').style.display = 'none';
+  document.getElementById('dashboard-empty').style.display = 'block';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+function applyAuth() {
+  if (!CURRENT_USER) return;
+  document.getElementById('login-screen').style.display = 'none';
+  const badge = document.getElementById('user-badge');
+  if (badge) badge.textContent = CURRENT_USER.perfil === 'admin' ? '⚙ Admin' : CURRENT_USER.usuario;
+  const imp = document.getElementById('import-section');
+  if (imp) imp.style.display = CURRENT_USER.perfil === 'admin' ? '' : 'none';
+  const btnLimpar = document.getElementById('btn-limpar');
+  if (btnLimpar) btnLimpar.style.display = CURRENT_USER.perfil === 'admin' ? '' : 'none';
+}
+
 
 // Converte Date → 'dd/mm/aaaa' para serialização segura sem fuso
 function dateToStr(d) {
