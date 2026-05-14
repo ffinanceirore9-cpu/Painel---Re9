@@ -104,7 +104,7 @@ details[open] .helpbox summary::before{transform:rotate(90deg);}
 .kpi.kpi-slate{border-left-color:#475569;}
 .kpi-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.9px;color:var(--text-3);margin-bottom:6px;}
 .kpi-value{font-size:20px;font-weight:600;letter-spacing:-1px;font-family:'IBM Plex Mono',monospace;line-height:1;margin-bottom:4px;}
-.kpi-sub{font-size:10px;color:var(--text-3);}
+.kpi-sub{font-size:10px;color:var(--text-3);padding-right:60px;line-height:1.4;}
 .kpi-delta{display:inline-block;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;margin-top:6px;}
 .kpi-delta.up{background:var(--green-bg);color:var(--green);}
 .kpi-delta.dn{background:var(--red-bg);color:var(--red);}
@@ -1148,7 +1148,7 @@ function renderKPIs(y,mo) {
     }):base;
     const total=vcol?rows.reduce((a,r)=>a+parseVal(r[vcol]),0):0;
     const label = cf ? 'Comissões pagas no mês' : 'Total recebido no mês';
-    const sub   = cf ? 'lançamentos com desc. COMISSAO' : 'soma de Vr.recebido';
+    const sub   = cf ? 'desc. COMISSAO' : 'soma de Vr.recebido';
     kpis.push({id:'recebido',label,value:fmtBRL(total),sub,delta:null,cls:'kpi-green',rows,type:'recebido',vcol});
   }
   if(_s.caixaMeta){
